@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>VendorOps Control Center</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand-block">
+      <div class="brand-mark">VO</div>
+      <div>
+        <h1>Vendor Operations Control Center <span class="version-mark">v8</span></h1>
+        <p>AI-assisted vendor inward, validation and gate operations</p>
+      </div>
+    </div>
+    <div class="top-actions">
+      <span class="env-badge"><span class="env-dot"></span> SANDBOX</span>
+      <button id="resetBtn" class="btn btn-danger btn-compact">Reset demo data</button>
+    </div>
+  </header>
+
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="side-label">WORKSPACE</div>
+      <button class="side-nav active" data-scroll="overview"><span>▦</span> Overview</button>
+      <button class="side-nav" data-tab="vendors"><span>◫</span> Vendors</button>
+      <button class="side-nav" data-tab="pos"><span>▤</span> Purchase Orders</button>
+      <button class="side-nav" data-tab="invoices"><span>▧</span> Invoices</button>
+      <button class="side-nav" data-tab="gate_entries"><span>⇥</span> Gate Entries</button>
+      <button class="side-nav" data-tab="approvals"><span>✓</span> Approvals <span id="sideApprovalBadge" class="nav-badge hidden">0</span></button>
+      <button class="side-nav" data-tab="notifications"><span>✉</span> Outbox</button>
+      <button class="side-nav" data-tab="audit"><span>⌁</span> Audit Log</button>
+      <button class="side-nav" data-tab="policies"><span>⚙</span> Policies</button>
+      <div class="side-foot">
+        <div class="side-foot-title">Agent runtime</div>
+        <div id="sideProvider" class="side-foot-text">Checking provider…</div>
+      </div>
+    </aside>
+
+    <main class="workspace" id="overview">
+      <section class="section-heading">
+        <div>
+          <div class="eyebrow">OPERATIONS OVERVIEW</div>
+          <h2>Vendor inward dashboard</h2>
+        </div>
+        <div class="last-refresh" id="lastRefresh">Live company state</div>
+      </section>
+
+      <section class="metrics" id="cards"></section>
+
+      <section class="panel workbench-panel">
+        <div class="panel-head">
+          <div>
+            <div class="eyebrow">AI OPERATIONS WORKBENCH</div>
+            <h3>Execute a vendor-inward task</h3>
+          </div>
+          <div id="runState" class="run-state idle"><span class="state-dot"></span><span>Idle</span></div>
+        </div>
+
+        <div class="workbench-grid">
+          <div class="task-pane">
+            <label for="prompt">Operational request</label>
+            <div class="prompt-shell">
+              <div class="prompt-shell-head">
+                <div class="prompt-shell-title">Prompt the operations agent</div>
+                <div class="prompt-shell-sub">Describe the business outcome you want. The agent interprets intent, validates policy, and executes safely.</div>
+              </div>
+              <textarea id="prompt" class="prompt-box" rows="5" placeholder="For example: Process this invoice and complete whatever can safely be completed. Verify the result.">Process this invoice and complete whatever can safely be completed. Verify the result.</textarea>
+              <div class="prompt-suggestions">
+                <button type="button" class="prompt-chip" data-prompt="Process this invoice and complete whatever can safely be completed. Verify the result.">Process invoice</button>
+                <button type="button" class="prompt-chip" data-prompt="Review this invoice, explain any blockers, and escalate only if policy requires it.">Review blockers</button>
+                <button type="button" class="prompt-chip" data-prompt="Validate this invoice against vendor, GST, PO, and duplicate rules. Then summarize the outcome clearly.">Validate only</button>
+              </div>
+            </div>
+
+            <div class="field-row">
+              <div class="field-grow">
+                <label for="invoice">Invoice document</label>
+                <input id="invoice" type="file" accept="image/*" />
+              </div>
+            </div>
+
+            <label for="mode">Execution mode</label>
+            <select id="mode">
+              <option value="groq_fast" selected>Groq Fast Hybrid · GPT-OSS-20B</option>
+              <option value="ollama_fast">Ollama Fast Hybrid · Qwen3 local</option>
+              <option value="deterministic">Deterministic fallback · offline</option>
+              <option value="groq">Groq Full Tool-Calling Agent · advanced</option>
+              <option value="ollama">Ollama Full Tool-Calling Agent · advanced</option>
+            </select>
+            <div id="providerStatus" class="provider-status">Checking model configuration…</div>
+
+            <div class="execute-row">
+              <button id="runBtn" class="btn btn-primary"><span class="play-icon">▶</span> Execute task</button>
+              <span class="microcopy">Writes are policy-checked and verified before completion.</span>
+            </div>
+          </div>
+
+          <div class="execution-pane">
+            <div class="execution-head">
+              <div>
+                <div class="execution-title">Live execution</div>
+                <div id="executionMeta" class="execution-meta">No task is running</div>
+              </div>
+              <div id="elapsed" class="elapsed">00:00</div>
+            </div>
+
+            <div id="liveEvents" class="live-events empty-state">
+              <div class="empty-icon">⌁</div>
+              <div class="empty-title">Execution trace will appear here</div>
+              <div class="empty-sub">Each model decision, validation, action and verification is shown as it happens.</div>
+            </div>
+
+            <div id="finalOutcome" class="final-outcome hidden"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel data-panel" id="dataExplorer">
+        <div class="panel-head data-head">
+          <div>
+            <div class="eyebrow">COMPANY DATA</div>
+            <h3 id="datasetTitle">Vendor master</h3>
+            <div id="datasetSubtitle" class="dataset-subtitle">Registered suppliers and onboarding state</div>
+          </div>
+          <div class="table-tools">
+            <input id="tableSearch" type="search" placeholder="Search current view…" />
+            <button id="refreshDataBtn" class="btn btn-secondary btn-compact">Refresh</button>
+          </div>
+        </div>
+
+        <div class="tabs" id="tabs">
+          <button class="tab active" data-tab="vendors">Vendors</button>
+          <button class="tab" data-tab="pos">Purchase Orders</button>
+          <button class="tab" data-tab="invoices">Invoices</button>
+          <button class="tab" data-tab="gate_entries">Gate Entries</button>
+          <button class="tab" data-tab="approvals">Approvals <span id="tabApprovalBadge" class="nav-badge hidden">0</span></button>
+          <button class="tab" data-tab="notifications">Outbox</button>
+          <button class="tab" data-tab="audit">Audit Log</button>
+          <button class="tab" data-tab="policies">Policies</button>
+        </div>
+
+        <div class="table-meta"><span id="rowCount">0 records</span><span id="tableHint">Showing current company state</span></div>
+        <div id="tableWrap" class="table-wrap"></div>
+      </section>
+    </main>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
